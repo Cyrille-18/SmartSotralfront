@@ -4,9 +4,6 @@ export interface Arret {
   nom: string;
   latitude: number;
   longitude: number;
-  nombreLignes?: number;
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface LigneArret {
@@ -14,7 +11,4 @@ export interface LigneArret {
   ligneTrackingId: string;
   arretTrackingId: string;
   ordre: number;
-  tempsArriveeEstime?: number;
-  createdAt?: string;
-  updatedAt?: string;
 }

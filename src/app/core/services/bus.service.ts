@@ -12,12 +12,4 @@ export class BusService extends BaseService<Bus> {
     super(http);
     this.setEndpoint('bus');
   }
-
-  getStats(): Observable<any> {
-    return this.http.get<any>(`${this.apiUrl}/bus/stats`);
-  }
-
-  changeStatus(id: number, statut: string): Observable<Bus> {
-    return this.http.patch<Bus>(`${this.apiUrl}/bus/${id}/statut`, { statut });
-  }
 }

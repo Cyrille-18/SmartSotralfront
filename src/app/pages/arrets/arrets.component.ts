@@ -4,7 +4,6 @@ import { ReactiveFormsModule, FormBuilder, Validators, FormGroup } from '@angula
 import { DataTableComponent } from '../../shared/components/data-table/data-table.component';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
-import { ArretService } from '../../core/services/arret.service';
 import { Arret } from '../../shared/models/arret.model';
 
 @Component({
@@ -113,7 +112,6 @@ import { Arret } from '../../shared/models/arret.model';
   `],
 })
 export class AretsComponent implements OnInit {
-  private arretService = inject(ArretService);
   private fb = inject(FormBuilder);
 
   arrets: Arret[] = [];
@@ -131,7 +129,7 @@ export class AretsComponent implements OnInit {
   ];
 
   arretForm: FormGroup = this.fb.group({
-    id: [null],
+    trackingId: [null],
     nom: ['', Validators.required],
     latitude: [6.1375, Validators.required],
     longitude: [1.2123, Validators.required],
@@ -142,22 +140,17 @@ export class AretsComponent implements OnInit {
   }
 
   refresh(): void {
-    this.arretService.getAll().subscribe({
-      next: data => (this.arrets = data),
-      error: () => {
-        this.arrets = [
-          { id: 1, nom: 'Gare routière', latitude: 6.1375, longitude: 1.2123 },
-          { id: 2, nom: 'Aéroport', latitude: 6.154, longitude: 1.246 },
-        ];
-      },
-    });
+    this.arrets = [
+      { id: 1, trackingId: 'a1', nom: 'Gare routière', latitude: 6.1375, longitude: 1.2123 },
+      { id: 2, trackingId: 'a2', nom: 'Aéroport', latitude: 6.154, longitude: 1.246 },
+    ];
   }
 
   openForm(arret?: Arret): void {
     this.arretSelectionne = arret;
     this.formTitle = arret ? `Modifier ${arret.nom}` : 'Nouvel arrêt';
     this.arretForm.reset({
-      id: arret?.id ?? null,
+      trackingId: arret?.trackingId ?? null,
       nom: arret?.nom ?? '',
       latitude: arret?.latitude ?? 6.1375,
       longitude: arret?.longitude ?? 1.2123,
@@ -173,14 +166,13 @@ export class AretsComponent implements OnInit {
   enregistrer(): void {
     if (this.arretForm.invalid) return;
     const payload = this.arretForm.value as Arret;
-    const action$ = payload.id
-      ? this.arretService.update(payload.id, payload)
-      : this.arretService.create(payload);
-
-    action$.subscribe({
-      next: () => { this.closeForm(); this.refresh(); },
-      error: () => { this.closeForm(); this.refresh(); },
-    });
+    if (payload.trackingId) {
+      this.arrets = this.arrets.map(a => a.trackingId === payload.trackingId ? { ...a, ...payload } : a);
+    } else {
+      const nextId = Math.max(...this.arrets.map(a => a.id ?? 0), 0) + 1;
+      this.arrets = [...this.arrets, { ...payload, id: nextId, trackingId: `a${nextId}` }];
+    }
+    this.closeForm();
   }
 
   demanderSuppression(arret: Arret): void {
@@ -190,10 +182,8 @@ export class AretsComponent implements OnInit {
   }
 
   supprimerConfirme(): void {
-    if (!this.arretSelectionne?.id) { this.dialogSuppression = false; return; }
-    this.arretService.delete(this.arretSelectionne.id).subscribe({
-      next: () => { this.dialogSuppression = false; this.refresh(); },
-      error: () => { this.dialogSuppression = false; this.refresh(); },
-    });
+    if (!this.arretSelectionne?.trackingId) { this.dialogSuppression = false; return; }
+    this.arrets = this.arrets.filter(a => a.trackingId !== this.arretSelectionne!.trackingId);
+    this.dialogSuppression = false;
   }
 }

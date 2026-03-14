@@ -18,8 +18,8 @@ interface NavItem {
       <!-- Logo -->
       <div class="sidebar-logo">
         <div class="logo">
-          <span class="logo-icon">🌍</span>
-          <span class="logo-text">SOTRAL</span>
+          <span class="logo-icon material-icons">public</span>
+          <span class="logo-text">SmartSotral</span>
         </div>
         <div class="logo-subtitle">Administration</div>
       </div>
@@ -34,7 +34,7 @@ interface NavItem {
                 routerLinkActive="active"
                 [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
                 class="nav-link">
-                <span class="nav-icon">{{ item.icon }}</span>
+                <span class="nav-icon material-icons">{{ item.icon }}</span>
                 <span class="nav-label">{{ item.label }}</span>
               </a>
             </li>
@@ -47,7 +47,7 @@ interface NavItem {
         <div class="user-info">
           <div class="user-name">{{ adminName() }}</div>
           <button class="logout-btn" (click)="logout()">
-            <span>🚪</span> Déconnexion
+            <span class="material-icons">logout</span> Déconnexion
           </button>
         </div>
       </div>
@@ -141,8 +141,8 @@ interface NavItem {
     }
 
     .nav-icon {
-      font-size: 18px;
-      min-width: 24px;
+      font-size: 20px;
+      min-width: 28px;
       display: flex;
       justify-content: center;
     }
@@ -219,31 +219,31 @@ export class SidebarComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
 
-  admin = signal(this.authService.getAdmin());
+  admin = signal(this.authService.getUser());
 
   adminName = computed(() => {
     const admin = this.admin();
     if (admin) {
-      const firstName = (admin as any).prenom || '';
-      const lastName = (admin as any).nom || '';
-      return `${firstName} ${lastName}`.trim() || 'Admin';
+      const firstName = admin.firstName || admin.nom || '';
+      const lastName = admin.lastName || '';
+      return `${firstName} ${lastName}`.trim() || admin.email || 'Admin';
     }
     return 'Admin';
   });
 
   navItems: NavItem[] = [
-    { label: 'Tableau de bord', route: '/dashboard', icon: '📊' },
-    { label: 'Bus', route: '/bus', icon: '🚌' },
-    { label: 'Lignes & Arrêts', route: '/lignes', icon: '🛣️' },
-    { label: 'Missions', route: '/missions', icon: '📋' },
-    { label: 'Conducteurs & Usagers', route: '/conducteurs', icon: '👥' },
-    { label: 'Carte réseau', route: '/carte', icon: '🗺️' },
-    { label: 'Profil', route: '/profil', icon: '👤' },
+    { label: 'Tableau de bord', route: '/dashboard', icon: 'dashboard' },
+    { label: 'Bus', route: '/bus', icon: 'directions_bus' },
+    { label: 'Lignes & Arrêts', route: '/lignes', icon: 'route' },
+    { label: 'Missions', route: '/missions', icon: 'assignment' },
+    { label: 'Conducteurs & Usagers', route: '/conducteurs', icon: 'groups' },
+    { label: 'Carte réseau', route: '/carte', icon: 'map' },
+    { label: 'Profil', route: '/profil', icon: 'person' },
   ];
 
   constructor() {
     // Mettre à jour le signal quand admin change
-    this.authService.admin$.subscribe(admin => {
+    this.authService.user$.subscribe(admin => {
       this.admin.set(admin);
     });
   }

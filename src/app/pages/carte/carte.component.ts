@@ -1,14 +1,12 @@
-import { Component, ChangeDetectionStrategy, signal, computed, AfterViewInit, OnDestroy, inject } from '@angular/core';
+import { Component, ChangeDetectionStrategy, signal, computed, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Arret } from '../../shared/models/arret.model';
 import { Ligne } from '../../shared/models/ligne.model';
 import { PositionBus } from '../../shared/models/position-bus.model';
 import { Prediction } from '../../shared/models/prediction.model';
-import { PositionGPSService } from '../../core/services/position-gps.service';
-import { ArretService } from '../../core/services/arret.service';
-import { LigneService } from '../../core/services/ligne.service';
-import { PredictionService } from '../../core/services/prediction.service';
-import { Subscription, interval, switchMap, catchError, of } from 'rxjs';
+import { LigneArretDto } from '../../core/services/ligne-arret.service';
+
+type LatLng = [number, number];
 
 @Component({
   selector: 'app-carte',
@@ -36,18 +34,18 @@ import { Subscription, interval, switchMap, catchError, of } from 'rxjs';
 
           @if (!sidebarCollapsed()) {
             <div class="lignes-list">
-              @for (ligne of lignes(); track ligne.id) {
+              @for (ligne of lignes(); track ligne.trackingId) {
                 <div
-                  [class.active]="activeLignes().includes(ligne.id!)"
+                  [class.active]="ligne.trackingId ? activeLignes().includes(ligne.trackingId) : false"
                   class="ligne-item"
-                  (click)="toggleLigne(ligne.id!)">
+                  (click)="toggleLigne(ligne.trackingId)">
                   <input
                     type="checkbox"
-                    [checked]="activeLignes().includes(ligne.id!)"
+                    [checked]="ligne.trackingId ? activeLignes().includes(ligne.trackingId) : false"
                     (click)="$event.stopPropagation()">
                   <span class="ligne-label">
-                    {{ ligne.nom || ligne.numero }}
-                    <span class="ligne-count">{{ ligne.arrets || ligne.nombreArrets || 0 }}</span>
+                    {{ ligne.numero }}
+                    <span class="ligne-count">{{ getArretsForLigne(ligne.trackingId) }}</span>
                   </span>
                 </div>
               }
@@ -234,15 +232,15 @@ import { Subscription, interval, switchMap, catchError, of } from 'rxjs';
       align-items: center;
       gap: 6px;
       background: rgba(255,255,255,0.92);
-      border: 2px solid #1976d2; /* bleu lignes */
+      border: 2px solid #ff9800; /* orange lignes */
       padding: 2px 6px;
       border-radius: 14px;
       box-shadow: 0 2px 6px rgba(0,0,0,0.25);
       font-family: var(--font-secondary);
     }
     .bus-icon-marker .line-badge {
-      background: #1976d2; /* bleu lignes */
-      color: white;
+      background: #ffb74d; /* orange clair */
+      color: #5d3a00;
       padding: 2px 6px;
       border-radius: 10px;
       font-size: 11px;
@@ -283,21 +281,16 @@ import { Subscription, interval, switchMap, catchError, of } from 'rxjs';
   `],
 })
 export class CarteComponent implements AfterViewInit, OnDestroy {
-  private positionService = inject(PositionGPSService);
-  private arretService = inject(ArretService);
-  private ligneService = inject(LigneService);
-  private predictionService = inject(PredictionService);
-
   lignes = signal<Ligne[]>([
-    { id: 1, nom: 'Ligne 1', arrets: 8 },
-    { id: 2, nom: 'Ligne 3', arrets: 12 },
-    { id: 3, nom: 'Ligne 8', arrets: 15 },
+    { id: 1, trackingId: 'mock-l1', numero: '1', depart: 'A', arrive: 'B' },
+    { id: 2, trackingId: 'mock-l3', numero: '3', depart: 'C', arrive: 'D' },
+    { id: 3, trackingId: 'mock-l8', numero: '8', depart: 'E', arrive: 'F' },
   ]);
 
   arrets = signal<Arret[]>([
-    { id: 1, nom: 'Gare routière', latitude: 6.1372, longitude: 1.2228, nombreLignes: 3 },
-    { id: 2, nom: 'Marché de Bè', latitude: 6.1375, longitude: 1.2123, nombreLignes: 2 },
-    { id: 3, nom: 'Grand Marché', latitude: 6.125, longitude: 1.2300, nombreLignes: 4 },
+    { id: 1, trackingId: 'mock-a1', nom: 'Gare routière', latitude: 6.1372, longitude: 1.2228 },
+    { id: 2, trackingId: 'mock-a2', nom: 'Marché de Bè', latitude: 6.1375, longitude: 1.2123 },
+    { id: 3, trackingId: 'mock-a3', nom: 'Grand Marché', latitude: 6.125, longitude: 1.2300 },
   ]);
 
   busPositions = signal<PositionBus[]>([
@@ -306,12 +299,13 @@ export class CarteComponent implements AfterViewInit, OnDestroy {
     { busTrackingId: 'b-3', vehiculeTrackingId: 'v-3', busCode: 'B-305', latitude: 6.120, longitude: 1.235, vitesse: 0, horodatage: new Date().toISOString(), missionActive: false },
   ]);
 
-  activeLignes = signal<number[]>([1, 2, 3]);
+  activeLignes = signal<string[]>([]);
   selectedBus = signal<PositionBus | null>(null);
   selectedArret = signal<Arret | null>(null);
   predictions = signal<Prediction[]>([]);
   loadingPredictions = signal(false);
   sidebarCollapsed = signal(false);
+  ligneArrets = signal<LigneArretDto[]>([]);
 
   activeBuses = computed(() => this.busPositions());
 
@@ -319,34 +313,31 @@ export class CarteComponent implements AfterViewInit, OnDestroy {
   private busMarkers: any[] = [];
   private arretLayer: any;
   private hqMarker: any;
-  private pollingSub?: Subscription;
-  private arretSub?: Subscription;
-
+  private routesLayer: any;
   async ngAfterViewInit(): Promise<void> {
     await this.initMap();
-    this.fetchArrets();
-    this.fetchLignes();
-    this.startPollingPositions();
+    this.plotArrets();
+    this.plotRoutes();
+    this.plotBuses();
   }
 
   ngOnDestroy(): void {
-    this.pollingSub?.unsubscribe();
-    this.arretSub?.unsubscribe();
     if (this.map) this.map.remove();
   }
 
-  toggleLigne(ligneId: number): void {
+  toggleLigne(ligneTrackingId?: string): void {
+    if (!ligneTrackingId) return;
     const current = this.activeLignes();
-    if (current.includes(ligneId)) {
-      this.activeLignes.set(current.filter(id => id !== ligneId));
+    if (current.includes(ligneTrackingId)) {
+      this.activeLignes.set(current.filter(id => id !== ligneTrackingId));
     } else {
-      this.activeLignes.set([...current, ligneId]);
+      this.activeLignes.set([...current, ligneTrackingId]);
     }
   }
 
-  getArretsForLigne(ligneId: number): number {
-    const ligne = this.lignes().find(l => l.id === ligneId);
-    return ligne?.arrets || ligne?.nombreArrets || 0;
+  getArretsForLigne(ligneTrackingId?: string): number {
+    if (!ligneTrackingId) return 0;
+    return this.ligneArrets().filter(la => la.ligneTrackingId === ligneTrackingId).length;
   }
 
   async zoomIn(): Promise<void> { if (this.map) this.map.zoomIn(); }
@@ -397,7 +388,7 @@ export class CarteComponent implements AfterViewInit, OnDestroy {
     const L: any = (await import('leaflet')).default || (await import('leaflet'));
     this.busMarkers.forEach(m => this.map.removeLayer(m));
     this.busMarkers = this.busPositions().map(b => {
-      const lineLabel = b.ligneCode || b.ligneNumero || 'L?';
+      const lineLabel = b.busCode || 'BUS';
       const marker = L.marker([b.latitude, b.longitude], {
         title: b.busCode,
         icon: L.divIcon({
@@ -415,42 +406,47 @@ export class CarteComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  private startPollingPositions(): void {
-    this.pollingSub = interval(5000)
-      .pipe(
-        switchMap(() => this.positionService.getDernierePositions().pipe(catchError(() => of([]))))
+  private async plotRoutes(): Promise<void> {
+    if (!this.map) return;
+    const L: any = (await import('leaflet')).default || (await import('leaflet'));
+    if (this.routesLayer) this.map.removeLayer(this.routesLayer);
+
+    // Construire les polylignes à partir des arrêts ordonnés par ligne
+    const arretMap = new Map<string, LatLng>();
+    this.arrets().forEach(a => { if (a.trackingId) arretMap.set(a.trackingId, [a.latitude, a.longitude]); });
+
+    const lignesByTracking = new Map<string, Ligne>();
+    this.lignes().forEach(l => { if (l.trackingId) lignesByTracking.set(l.trackingId, l); });
+
+    const grouped = new Map<string, LigneArretDto[]>();
+    this.ligneArrets().forEach(la => {
+      if (!grouped.has(la.ligneTrackingId)) grouped.set(la.ligneTrackingId, []);
+      grouped.get(la.ligneTrackingId)!.push(la);
+    });
+
+    const polylines = Array.from(grouped.entries()).map(([ligneTrackingId, stops]) => {
+      const sorted = stops.sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0));
+      const coords: LatLng[] = [];
+      sorted.forEach(s => {
+        const c = arretMap.get(s.arretTrackingId);
+        if (c) coords.push(c);
+      });
+      const ligne = lignesByTracking.get(ligneTrackingId);
+      const label = ligne?.numero ? `L${ligne.numero}` : 'Ligne';
+      return { label, coords };
+    }).filter(p => p.coords.length >= 2);
+
+    this.routesLayer = L.layerGroup(
+      polylines.map(p =>
+        L.polyline(p.coords, { color: '#ff9800', weight: 5, opacity: 0.8 })
+          .bindPopup(p.label)
       )
-      .subscribe(data => {
-        const positions = (data as PositionBus[])?.length ? (data as PositionBus[]) : this.busPositions();
-        this.busPositions.set(positions);
-        this.plotBuses();
-      });
-  }
-
-  private fetchLignes(): void {
-    this.ligneService.getAll()
-      .pipe(catchError(() => of(this.lignes())))
-      .subscribe(list => this.lignes.set(list));
-  }
-
-  private fetchArrets(): void {
-    this.arretSub = this.arretService.getAll()
-      .pipe(catchError(() => of(this.arrets())))
-      .subscribe(list => {
-        this.arrets.set(list);
-        this.plotArrets();
-      });
+    ).addTo(this.map);
   }
 
   private loadPredictions(arret: Arret): void {
-    if (!arret.trackingId) { this.selectedArret.set(arret); this.predictions.set([]); return; }
     this.selectedArret.set(arret);
-    this.loadingPredictions.set(true);
-    this.predictionService.getPredictionParArret(arret.trackingId)
-      .pipe(catchError(() => of([])))
-      .subscribe(list => {
-        this.predictions.set(list);
-        this.loadingPredictions.set(false);
-      });
+    this.predictions.set([]);
+    this.loadingPredictions.set(false);
   }
 }

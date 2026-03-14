@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { Compte } from '../../../shared/models/compte.model';
 
 @Component({
   selector: 'app-login',
@@ -14,8 +13,8 @@ import { Compte } from '../../../shared/models/compte.model';
       <!-- Bande verte décorative gauche -->
       <div class="login-decoration">
         <div class="decoration-content">
-          <h2 class="decoration-title">SOTRAL</h2>
-          <p class="decoration-subtitle">Gestion du réseau de transport</p>
+          <h2 class="decoration-title">SmartSotral</h2>
+          <p class="decoration-subtitle">Plateforme unifiée du réseau</p>
         </div>
       </div>
 
@@ -25,8 +24,8 @@ import { Compte } from '../../../shared/models/compte.model';
           <!-- Logo et titre -->
           <div class="login-header">
             <div class="logo-circle">🌍</div>
-            <h1 class="logo-title">SOTRAL</h1>
-            <p class="logo-subtitle">Administration du réseau</p>
+            <h1 class="logo-title">SmartSotral</h1>
+            <p class="logo-subtitle">Système d'information voyageur</p>
           </div>
 
           <!-- Formulaire -->
@@ -92,7 +91,7 @@ import { Compte } from '../../../shared/models/compte.model';
 
           <!-- Footer -->
           <div class="login-footer">
-            <p class="footer-text">Accès réservé aux administrateurs SOTRAL</p>
+            <p class="footer-text">SmartSotral • Système d'information voyageur</p>
           </div>
         </div>
       </div>
@@ -146,10 +145,12 @@ import { Compte } from '../../../shared/models/compte.model';
 
     .logo-title {
       font-family: var(--font-primary);
-      font-size: 28px;
-      font-weight: 700;
+      font-size: 30px;
+      letter-spacing: 0.5px;
+      font-weight: 800;
       color: var(--sotral-vert);
       margin: 0 0 4px 0;
+      text-transform: uppercase;
     }
 
     .logo-subtitle {
@@ -348,18 +349,7 @@ export class LoginComponent {
     };
 
     this.authService.login(credentials).subscribe({
-      next: (response) => {
-        const admin = response.admin as any;
-        const adminData: Compte = {
-          id: admin?.id,
-          nom: admin?.nom || '',
-          prenom: admin?.prenom || '',
-          email: admin?.email || '',
-          telephone: admin?.telephone || '',
-          role: 'ADMIN',
-          statut: 'ACTIF',
-        };
-        this.authService.setAdmin(adminData);
+      next: () => {
         this.router.navigate(['/dashboard']);
         this.loading.set(false);
       },

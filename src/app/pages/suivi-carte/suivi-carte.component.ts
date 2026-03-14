@@ -2,7 +2,6 @@ import { Component, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ToastService } from '../../shared/components/toast/toast.service';
-import { PositionGPSService } from '../../core/services/position-gps.service';
 import { Subscription, interval, switchMap, catchError, of } from 'rxjs';
 
 @Component({
@@ -21,7 +20,7 @@ import { Subscription, interval, switchMap, catchError, of } from 'rxjs';
         </div>
         <ul class="bus-list">
           <li *ngFor="let bus of busActifs">
-            <strong>{{ bus.code }}</strong> — {{ bus.vitesse ?? '?' }} km/h — Ligne {{ bus.ligne }}
+            <strong>{{ bus.code }}</strong> — {{ bus.vitesse ?? '?' }} km/h
           </li>
           <li *ngIf="busActifs.length === 0" class="empty">Aucun bus actif.</li>
         </ul>
@@ -101,12 +100,11 @@ export class SuiviCarteComponent implements AfterViewInit, OnDestroy {
   private arretLayer?: any;
   private pollingSub?: Subscription;
 
-  busActifs: Array<{ code: string; vitesse?: number; ligne?: string; lat?: number; lng?: number }> = [];
+  busActifs: Array<{ code: string; vitesse?: number; lat?: number; lng?: number }> = [];
   afficherArrets = false;
 
   constructor(
-    private toast: ToastService,
-    private positionService: PositionGPSService
+    private toast: ToastService
   ) {}
 
   async ngAfterViewInit(): Promise<void> {
@@ -129,30 +127,15 @@ export class SuiviCarteComponent implements AfterViewInit, OnDestroy {
   }
 
   private startPolling(): void {
-    this.pollingSub = interval(5000)
-      .pipe(
-        switchMap(() => this.positionService.getDernierePositions().pipe(catchError(() => of([]))))
-      )
-      .subscribe(data => {
-        this.busActifs = data.map((p: any) => ({
-          code: p.busCode || p.busId || 'BUS',
-          vitesse: p.vitesse,
-          ligne: p.ligne || p.ligneId,
-          lat: p.latitude,
-          lng: p.longitude,
-        }));
-        this.refreshMarkers();
-      });
+    this.busActifs = [
+      { code: 'BUS-101', vitesse: 32, lat: 6.14, lng: 1.21 },
+      { code: 'BUS-205', vitesse: 25, lat: 6.13, lng: 1.23 },
+    ];
+    this.refreshMarkers();
   }
 
   refreshOnce(): void {
-    this.positionService.getDernierePositions().subscribe({
-      next: data => {
-        this.busActifs = data as any;
-        this.refreshMarkers();
-      },
-      error: () => this.toast.warning('Positions indisponibles'),
-    });
+    this.startPolling();
   }
 
   private async refreshMarkers(): Promise<void> {
@@ -163,7 +146,7 @@ export class SuiviCarteComponent implements AfterViewInit, OnDestroy {
     this.busActifs.forEach(b => {
       if (b.lat && b.lng) {
         const m = L.marker([b.lat, b.lng], { title: b.code }).addTo(this.map);
-        m.bindPopup(`${b.code} — ${b.ligne ?? 'Ligne ?'}`);
+        m.bindPopup(`${b.code}`);
         this.markers.push(m);
       }
     });

@@ -13,7 +13,7 @@ export class CompteService extends BaseService<Compte> {
     this.setEndpoint('comptes');
   }
 
-  changeStatut(id: number, statut: string): Observable<Compte> {
-    return this.http.patch<Compte>(`${this.apiUrl}/comptes/${id}/statut`, { statut });
+  changeStatut(trackingId: string, statut: string): Observable<Compte> {
+    return this.http.patch<Compte>(`${this.apiUrl}/comptes/${trackingId}/statut`, { statut });
   }
 }
