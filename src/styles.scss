@@ -1,0 +1,249 @@
+/* ==========================================
+   SOTRAL — Système d'Information Voyageurs
+   Styles globaux et variables de couleur
+   ========================================== */
+
+/* Variables CSS SOTRAL */
+:root {
+  --sotral-vert: #1A7A3F;
+  --sotral-vert-dark: #145C2E;
+  --sotral-rouge: #C0392B;
+  --sotral-blanc: #FFFFFF;
+  --sotral-gris-l: #F5F5F5;
+  --sotral-gris-b: #E0E0E0;
+  --sotral-noir: #212121;
+}
+
+/* Reset et styles de base */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
+    Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
+  font-size: 14px;
+  color: var(--sotral-noir);
+  background-color: var(--sotral-gris-l);
+  line-height: 1.6;
+}
+
+h1 {
+  color: var(--sotral-vert);
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+h2 {
+  color: var(--sotral-rouge);
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+h3 {
+  color: var(--sotral-noir);
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+p {
+  margin-bottom: 8px;
+}
+
+a {
+  color: var(--sotral-vert);
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+/* Boutons de base */
+button {
+  border: none;
+  border-radius: 4px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.btn-primary {
+  background-color: var(--sotral-vert);
+  color: var(--sotral-blanc);
+
+  &:hover:not(:disabled) {
+    background-color: var(--sotral-vert-dark);
+  }
+}
+
+.btn-danger {
+  background-color: var(--sotral-rouge);
+  color: var(--sotral-blanc);
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+}
+
+.btn-secondary {
+  background-color: var(--sotral-gris-b);
+  color: var(--sotral-noir);
+
+  &:hover:not(:disabled) {
+    background-color: #d0d0d0;
+  }
+}
+
+/* Inputs et formulaires */
+input,
+textarea,
+select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--sotral-gris-b);
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--sotral-noir);
+  transition: border-color 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--sotral-vert);
+    box-shadow: 0 0 0 2px rgba(26, 122, 63, 0.1);
+  }
+
+  &:disabled {
+    background-color: var(--sotral-gris-l);
+    cursor: not-allowed;
+  }
+}
+
+/* Tableau générique */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--sotral-blanc);
+
+  thead {
+    background-color: var(--sotral-gris-l);
+    border-bottom: 2px solid var(--sotral-gris-b);
+  }
+
+  th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--sotral-noir);
+  }
+
+  td {
+    padding: 12px;
+    border-bottom: 1px solid var(--sotral-gris-b);
+  }
+
+  tbody tr:nth-child(even) {
+    background-color: var(--sotral-gris-l);
+  }
+
+  tbody tr:hover {
+    background-color: #e8f5e9;
+  }
+}
+
+/* Messages et alertes */
+.alert {
+  padding: 12px 16px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 14px;
+
+  &.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+  }
+
+  &.alert-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+
+  &.alert-warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+  }
+
+  &.alert-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+  }
+}
+
+/* Utilitaires */
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-muted {
+  color: #999;
+}
+
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+.mt-3 { margin-top: 24px; }
+.mb-1 { margin-bottom: 8px; }
+.mb-2 { margin-bottom: 16px; }
+.mb-3 { margin-bottom: 24px; }
+
+.p-1 { padding: 8px; }
+.p-2 { padding: 16px; }
+.p-3 { padding: 24px; }
+
+.rounded {
+  border-radius: 4px;
+}
+
+.shadow {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.d-flex {
+  display: flex;
+}
+
+.d-flex.gap-1 {
+  gap: 8px;
+}
+
+.d-flex.gap-2 {
+  gap: 16px;
+}
