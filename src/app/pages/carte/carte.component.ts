@@ -8,7 +8,10 @@ import { PositionGPSService } from '../../core/services/position-gps.service';
 import { ArretService } from '../../core/services/arret.service';
 import { LigneService } from '../../core/services/ligne.service';
 import { PredictionService } from '../../core/services/prediction.service';
+import { LigneArretService, LigneArretDto } from '../../core/services/ligne-arret.service';
 import { Subscription, interval, switchMap, catchError, of } from 'rxjs';
+
+type LatLng = [number, number];
 
 @Component({
   selector: 'app-carte',
@@ -287,17 +290,18 @@ export class CarteComponent implements AfterViewInit, OnDestroy {
   private arretService = inject(ArretService);
   private ligneService = inject(LigneService);
   private predictionService = inject(PredictionService);
+  private ligneArretService = inject(LigneArretService);
 
   lignes = signal<Ligne[]>([
-    { id: 1, nom: 'Ligne 1', arrets: 8 },
-    { id: 2, nom: 'Ligne 3', arrets: 12 },
-    { id: 3, nom: 'Ligne 8', arrets: 15 },
+    { id: 1, trackingId: 'mock-l1', nom: 'Ligne 1', numero: '1', arrets: 8 },
+    { id: 2, trackingId: 'mock-l3', nom: 'Ligne 3', numero: '3', arrets: 12 },
+    { id: 3, trackingId: 'mock-l8', nom: 'Ligne 8', numero: '8', arrets: 15 },
   ]);
 
   arrets = signal<Arret[]>([
-    { id: 1, nom: 'Gare routière', latitude: 6.1372, longitude: 1.2228, nombreLignes: 3 },
-    { id: 2, nom: 'Marché de Bè', latitude: 6.1375, longitude: 1.2123, nombreLignes: 2 },
-    { id: 3, nom: 'Grand Marché', latitude: 6.125, longitude: 1.2300, nombreLignes: 4 },
+    { id: 1, trackingId: 'mock-a1', nom: 'Gare routière', latitude: 6.1372, longitude: 1.2228, nombreLignes: 3 },
+    { id: 2, trackingId: 'mock-a2', nom: 'Marché de Bè', latitude: 6.1375, longitude: 1.2123, nombreLignes: 2 },
+    { id: 3, trackingId: 'mock-a3', nom: 'Grand Marché', latitude: 6.125, longitude: 1.2300, nombreLignes: 4 },
   ]);
 
   busPositions = signal<PositionBus[]>([
@@ -312,6 +316,7 @@ export class CarteComponent implements AfterViewInit, OnDestroy {
   predictions = signal<Prediction[]>([]);
   loadingPredictions = signal(false);
   sidebarCollapsed = signal(false);
+  ligneArrets = signal<LigneArretDto[]>([]);
 
   activeBuses = computed(() => this.busPositions());
 
@@ -319,19 +324,23 @@ export class CarteComponent implements AfterViewInit, OnDestroy {
   private busMarkers: any[] = [];
   private arretLayer: any;
   private hqMarker: any;
+  private routesLayer: any;
   private pollingSub?: Subscription;
   private arretSub?: Subscription;
+  private ligneArretSub?: Subscription;
 
   async ngAfterViewInit(): Promise<void> {
     await this.initMap();
     this.fetchArrets();
     this.fetchLignes();
+    this.fetchLigneArrets();
     this.startPollingPositions();
   }
 
   ngOnDestroy(): void {
     this.pollingSub?.unsubscribe();
     this.arretSub?.unsubscribe();
+    this.ligneArretSub?.unsubscribe();
     if (this.map) this.map.remove();
   }
 
@@ -415,6 +424,44 @@ export class CarteComponent implements AfterViewInit, OnDestroy {
     });
   }
 
+  private async plotRoutes(): Promise<void> {
+    if (!this.map) return;
+    const L: any = (await import('leaflet')).default || (await import('leaflet'));
+    if (this.routesLayer) this.map.removeLayer(this.routesLayer);
+
+    // Construire les polylignes à partir des arrêts ordonnés par ligne
+    const arretMap = new Map<string, LatLng>();
+    this.arrets().forEach(a => { if (a.trackingId) arretMap.set(a.trackingId, [a.latitude, a.longitude]); });
+
+    const lignesByTracking = new Map<string, Ligne>();
+    this.lignes().forEach(l => { if (l.trackingId) lignesByTracking.set(l.trackingId, l); });
+
+    const grouped = new Map<string, LigneArretDto[]>();
+    this.ligneArrets().forEach(la => {
+      if (!grouped.has(la.ligneTrackingId)) grouped.set(la.ligneTrackingId, []);
+      grouped.get(la.ligneTrackingId)!.push(la);
+    });
+
+    const polylines = Array.from(grouped.entries()).map(([ligneTrackingId, stops]) => {
+      const sorted = stops.sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0));
+      const coords: LatLng[] = [];
+      sorted.forEach(s => {
+        const c = arretMap.get(s.arretTrackingId);
+        if (c) coords.push(c);
+      });
+      const ligne = lignesByTracking.get(ligneTrackingId);
+      const label = ligne?.numero ? `L${ligne.numero}` : ligne?.nom ?? 'Ligne';
+      return { label, coords };
+    }).filter(p => p.coords.length >= 2);
+
+    this.routesLayer = L.layerGroup(
+      polylines.map(p =>
+        L.polyline(p.coords, { color: '#1976d2', weight: 4, opacity: 0.7 })
+          .bindPopup(p.label)
+      )
+    ).addTo(this.map);
+  }
+
   private startPollingPositions(): void {
     this.pollingSub = interval(5000)
       .pipe(
@@ -439,6 +486,15 @@ export class CarteComponent implements AfterViewInit, OnDestroy {
       .subscribe(list => {
         this.arrets.set(list);
         this.plotArrets();
+      });
+  }
+
+  private fetchLigneArrets(): void {
+    this.ligneArretSub = this.ligneArretService.getAll()
+      .pipe(catchError(() => of([])))
+      .subscribe(list => {
+        this.ligneArrets.set(list);
+        this.plotRoutes();
       });
   }
 
