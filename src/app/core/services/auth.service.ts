@@ -1,89 +1,88 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { AuthLoginRequest, AuthLoginResponse, Compte } from '../../shared/models/auth.model';
 import { environment } from '../../../environments/environment';
-import { of } from 'rxjs';
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class AuthService {
   private tokenSubject = new BehaviorSubject<string | null>(null);
-  private adminSubject = new BehaviorSubject<Compte | null>(null);
+  private userSubject = new BehaviorSubject<Compte | null>(null);
   private apiUrl = environment.apiUrl;
+  private isBrowser: boolean;
 
-  public token$ = this.tokenSubject.asObservable();
-  public admin$ = this.adminSubject.asObservable();
+  token$ = this.tokenSubject.asObservable();
+  user$ = this.userSubject.asObservable();
 
-  constructor(private http: HttpClient) {
-    const storedToken = this.getTokenFromMemory();
-    if (storedToken) {
-      this.tokenSubject.next(storedToken);
+  constructor(private http: HttpClient, @Inject(PLATFORM_ID) platformId: object) {
+    this.isBrowser = typeof window !== 'undefined' && typeof localStorage !== 'undefined';
+
+    if (this.isBrowser) {
+      const storedToken = localStorage.getItem('sotral_token');
+      if (storedToken) {
+        this.tokenSubject.next(storedToken);
+      }
+
+      const storedUser = localStorage.getItem('sotral_user');
+      if (storedUser) {
+        this.userSubject.next(JSON.parse(storedUser));
+      }
     }
   }
 
   login(credentials: AuthLoginRequest): Observable<AuthLoginResponse> {
-    // Mock authentication - accept admin@sotral.tg with any password >= 8 chars
-    if (credentials.email === 'admin@sotral.tg' && credentials.password?.length >= 8) {
-      const mockResponse: AuthLoginResponse = {
-        trackingId: 'track-' + Date.now(),
-        token: 'mock-jwt-token-' + Date.now(),
-        type: 'Bearer',
-        firstName: 'SOTRAL',
-        lastName: 'Admin',
-        phone: '+228 90 00 00 00',
-        email: 'admin@sotral.tg',
-        roles: 'ADMIN',
-        rolesList: ['ADMIN'],
-        country: 'TG',
-        active: true,
-        admin: {
-          id: 1,
-          nom: 'Admin',
-          email: 'admin@sotral.tg'
-        }
-      };
-      this.setToken(mockResponse.token);
-      this.setAdmin(mockResponse.admin as any);
-      return new Observable(observer => {
-        observer.next(mockResponse);
-        observer.complete();
-      });
-    }
-    // Reject invalid credentials
-    return new Observable(observer => {
-      observer.error({ status: 401, message: 'Identifiants incorrects' });
-    });
+    return this.http
+      .post<AuthLoginResponse>(`${this.apiUrl}/users/login`, credentials)
+      .pipe(
+        tap(response => {
+          this.setToken(response.token);
+          const user: Compte = {
+            trackingId: response.trackingId,
+            firstName: response.firstName,
+            lastName: response.lastName,
+            email: response.email,
+            phone: response.phone,
+            role: (response.rolesList?.[0] as any) || 'ADMIN',
+            country: response.country,
+            active: response.active,
+          };
+          this.setUser(user);
+        })
+      );
   }
 
   setToken(token: string): void {
     this.tokenSubject.next(token);
-    // Stockage en mémoire (pas de localStorage)
+    if (this.isBrowser) {
+      localStorage.setItem('sotral_token', token);
+    }
   }
 
   getToken(): string | null {
     return this.tokenSubject.value;
   }
 
-  private getTokenFromMemory(): string | null {
-    return this.tokenSubject.value;
+  setUser(user: Compte): void {
+    this.userSubject.next(user);
+    if (this.isBrowser) {
+      localStorage.setItem('sotral_user', JSON.stringify(user));
+    }
   }
 
-  setAdmin(admin: Compte): void {
-    this.adminSubject.next(admin);
-  }
-
-  getAdmin(): Compte | null {
-    return this.adminSubject.value;
+  getUser(): Compte | null {
+    return this.userSubject.value;
   }
 
   isLoggedIn(): boolean {
-    return this.getToken() !== null && this.getToken() !== '';
+    return !!this.getToken();
   }
 
   logout(): void {
     this.tokenSubject.next(null);
-    this.adminSubject.next(null);
+    this.userSubject.next(null);
+    if (this.isBrowser) {
+      localStorage.removeItem('sotral_token');
+      localStorage.removeItem('sotral_user');
+    }
   }
 }

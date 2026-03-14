@@ -147,6 +147,7 @@ export class ComptesComponent implements OnInit {
 
   compteForm: FormGroup = this.fb.group({
     id: [null],
+    trackingId: [null],
     nom: ['', Validators.required],
     email: ['', [Validators.required, Validators.email]],
     role: ['USAGER', Validators.required],
@@ -164,7 +165,7 @@ export class ComptesComponent implements OnInit {
       next: data => { this.comptes = data; this.applyFilter(); },
       error: () => {
         this.comptes = [{
-          id: 1, nom: 'Admin', email: 'admin@sotral.tg', role: 'ADMIN', statut: 'ACTIF', dateCreation: new Date().toISOString(),
+          id: 1, trackingId: 'demo-compte', nom: 'Admin', email: 'admin@sotral.tg', role: 'ADMIN', statut: 'ACTIF', dateCreation: new Date().toISOString(),
         }];
         this.applyFilter();
         this.toast.warning('Comptes mock (API indisponible)');
@@ -189,6 +190,7 @@ export class ComptesComponent implements OnInit {
     this.formTitle = compte ? `Modifier ${compte.nom}` : 'Nouveau compte';
     this.compteForm.reset({
       id: compte?.id ?? null,
+      trackingId: compte?.trackingId ?? null,
       nom: compte?.nom ?? '',
       email: compte?.email ?? '',
       role: compte?.role ?? 'USAGER',
@@ -204,8 +206,8 @@ export class ComptesComponent implements OnInit {
   enregistrer(): void {
     if (this.compteForm.invalid) return;
     const payload = this.compteForm.value as Compte;
-    const action$ = payload.id
-      ? this.compteService.update(payload.id, payload)
+    const action$ = payload.trackingId
+      ? this.compteService.update(payload.trackingId, payload)
       : this.compteService.create(payload);
     action$.subscribe({
       next: () => { this.toast.success('Compte enregistré'); this.closeForm(); this.refresh(); },
@@ -214,9 +216,9 @@ export class ComptesComponent implements OnInit {
   }
 
   toggleStatut(compte: Compte): void {
-    if (!compte.id) return;
+    if (!compte.trackingId) return;
     const nouveau = compte.statut === 'ACTIF' ? 'SUSPENDU' : 'ACTIF';
-    this.compteService.changeStatut(compte.id, nouveau).subscribe({
+    this.compteService.changeStatut(compte.trackingId, nouveau).subscribe({
       next: () => { compte.statut = nouveau as any; this.applyFilter(); },
       error: () => this.toast.error('Impossible de changer le statut'),
     });
@@ -229,8 +231,8 @@ export class ComptesComponent implements OnInit {
   }
 
   supprimerConfirme(): void {
-    if (!this.compteSelectionne?.id) { this.dialogSuppression = false; return; }
-    this.compteService.delete(this.compteSelectionne.id).subscribe({
+    if (!this.compteSelectionne?.trackingId) { this.dialogSuppression = false; return; }
+    this.compteService.delete(this.compteSelectionne.trackingId).subscribe({
       next: () => { this.toast.success('Compte supprimé'); this.dialogSuppression = false; this.refresh(); },
       error: () => { this.toast.error('Suppression impossible'); this.dialogSuppression = false; this.refresh(); },
     });

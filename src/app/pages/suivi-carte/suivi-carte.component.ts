@@ -21,7 +21,7 @@ import { Subscription, interval, switchMap, catchError, of } from 'rxjs';
         </div>
         <ul class="bus-list">
           <li *ngFor="let bus of busActifs">
-            <strong>{{ bus.code }}</strong> — {{ bus.vitesse ?? '?' }} km/h — Ligne {{ bus.ligne }}
+            <strong>{{ bus.code }}</strong> — {{ bus.vitesse ?? '?' }} km/h
           </li>
           <li *ngIf="busActifs.length === 0" class="empty">Aucun bus actif.</li>
         </ul>
@@ -101,7 +101,7 @@ export class SuiviCarteComponent implements AfterViewInit, OnDestroy {
   private arretLayer?: any;
   private pollingSub?: Subscription;
 
-  busActifs: Array<{ code: string; vitesse?: number; ligne?: string; lat?: number; lng?: number }> = [];
+  busActifs: Array<{ code: string; vitesse?: number; lat?: number; lng?: number }> = [];
   afficherArrets = false;
 
   constructor(
@@ -137,7 +137,6 @@ export class SuiviCarteComponent implements AfterViewInit, OnDestroy {
         this.busActifs = data.map((p: any) => ({
           code: p.busCode || p.busId || 'BUS',
           vitesse: p.vitesse,
-          ligne: p.ligne || p.ligneId,
           lat: p.latitude,
           lng: p.longitude,
         }));
@@ -148,7 +147,12 @@ export class SuiviCarteComponent implements AfterViewInit, OnDestroy {
   refreshOnce(): void {
     this.positionService.getDernierePositions().subscribe({
       next: data => {
-        this.busActifs = data as any;
+        this.busActifs = (data as any[]).map(p => ({
+          code: p.busCode || p.busId || 'BUS',
+          vitesse: p.vitesse,
+          lat: p.latitude,
+          lng: p.longitude,
+        }));
         this.refreshMarkers();
       },
       error: () => this.toast.warning('Positions indisponibles'),
@@ -163,7 +167,7 @@ export class SuiviCarteComponent implements AfterViewInit, OnDestroy {
     this.busActifs.forEach(b => {
       if (b.lat && b.lng) {
         const m = L.marker([b.lat, b.lng], { title: b.code }).addTo(this.map);
-        m.bindPopup(`${b.code} — ${b.ligne ?? 'Ligne ?'}`);
+        m.bindPopup(`${b.code}`);
         this.markers.push(m);
       }
     });

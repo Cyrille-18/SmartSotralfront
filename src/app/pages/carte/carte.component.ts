@@ -39,18 +39,18 @@ type LatLng = [number, number];
 
           @if (!sidebarCollapsed()) {
             <div class="lignes-list">
-              @for (ligne of lignes(); track ligne.id) {
+              @for (ligne of lignes(); track ligne.trackingId) {
                 <div
-                  [class.active]="activeLignes().includes(ligne.id!)"
+                  [class.active]="ligne.trackingId ? activeLignes().includes(ligne.trackingId) : false"
                   class="ligne-item"
-                  (click)="toggleLigne(ligne.id!)">
+                  (click)="toggleLigne(ligne.trackingId)">
                   <input
                     type="checkbox"
-                    [checked]="activeLignes().includes(ligne.id!)"
+                    [checked]="ligne.trackingId ? activeLignes().includes(ligne.trackingId) : false"
                     (click)="$event.stopPropagation()">
                   <span class="ligne-label">
-                    {{ ligne.nom || ligne.numero }}
-                    <span class="ligne-count">{{ ligne.arrets || ligne.nombreArrets || 0 }}</span>
+                    {{ ligne.numero }}
+                    <span class="ligne-count">{{ getArretsForLigne(ligne.trackingId) }}</span>
                   </span>
                 </div>
               }
@@ -293,15 +293,15 @@ export class CarteComponent implements AfterViewInit, OnDestroy {
   private ligneArretService = inject(LigneArretService);
 
   lignes = signal<Ligne[]>([
-    { id: 1, trackingId: 'mock-l1', nom: 'Ligne 1', numero: '1', arrets: 8 },
-    { id: 2, trackingId: 'mock-l3', nom: 'Ligne 3', numero: '3', arrets: 12 },
-    { id: 3, trackingId: 'mock-l8', nom: 'Ligne 8', numero: '8', arrets: 15 },
+    { id: 1, trackingId: 'mock-l1', numero: '1', depart: 'A', arrive: 'B' },
+    { id: 2, trackingId: 'mock-l3', numero: '3', depart: 'C', arrive: 'D' },
+    { id: 3, trackingId: 'mock-l8', numero: '8', depart: 'E', arrive: 'F' },
   ]);
 
   arrets = signal<Arret[]>([
-    { id: 1, trackingId: 'mock-a1', nom: 'Gare routière', latitude: 6.1372, longitude: 1.2228, nombreLignes: 3 },
-    { id: 2, trackingId: 'mock-a2', nom: 'Marché de Bè', latitude: 6.1375, longitude: 1.2123, nombreLignes: 2 },
-    { id: 3, trackingId: 'mock-a3', nom: 'Grand Marché', latitude: 6.125, longitude: 1.2300, nombreLignes: 4 },
+    { id: 1, trackingId: 'mock-a1', nom: 'Gare routière', latitude: 6.1372, longitude: 1.2228 },
+    { id: 2, trackingId: 'mock-a2', nom: 'Marché de Bè', latitude: 6.1375, longitude: 1.2123 },
+    { id: 3, trackingId: 'mock-a3', nom: 'Grand Marché', latitude: 6.125, longitude: 1.2300 },
   ]);
 
   busPositions = signal<PositionBus[]>([
@@ -310,7 +310,7 @@ export class CarteComponent implements AfterViewInit, OnDestroy {
     { busTrackingId: 'b-3', vehiculeTrackingId: 'v-3', busCode: 'B-305', latitude: 6.120, longitude: 1.235, vitesse: 0, horodatage: new Date().toISOString(), missionActive: false },
   ]);
 
-  activeLignes = signal<number[]>([1, 2, 3]);
+  activeLignes = signal<string[]>([]);
   selectedBus = signal<PositionBus | null>(null);
   selectedArret = signal<Arret | null>(null);
   predictions = signal<Prediction[]>([]);
@@ -344,18 +344,19 @@ export class CarteComponent implements AfterViewInit, OnDestroy {
     if (this.map) this.map.remove();
   }
 
-  toggleLigne(ligneId: number): void {
+  toggleLigne(ligneTrackingId?: string): void {
+    if (!ligneTrackingId) return;
     const current = this.activeLignes();
-    if (current.includes(ligneId)) {
-      this.activeLignes.set(current.filter(id => id !== ligneId));
+    if (current.includes(ligneTrackingId)) {
+      this.activeLignes.set(current.filter(id => id !== ligneTrackingId));
     } else {
-      this.activeLignes.set([...current, ligneId]);
+      this.activeLignes.set([...current, ligneTrackingId]);
     }
   }
 
-  getArretsForLigne(ligneId: number): number {
-    const ligne = this.lignes().find(l => l.id === ligneId);
-    return ligne?.arrets || ligne?.nombreArrets || 0;
+  getArretsForLigne(ligneTrackingId?: string): number {
+    if (!ligneTrackingId) return 0;
+    return this.ligneArrets().filter(la => la.ligneTrackingId === ligneTrackingId).length;
   }
 
   async zoomIn(): Promise<void> { if (this.map) this.map.zoomIn(); }
@@ -406,7 +407,7 @@ export class CarteComponent implements AfterViewInit, OnDestroy {
     const L: any = (await import('leaflet')).default || (await import('leaflet'));
     this.busMarkers.forEach(m => this.map.removeLayer(m));
     this.busMarkers = this.busPositions().map(b => {
-      const lineLabel = b.ligneCode || b.ligneNumero || 'L?';
+      const lineLabel = b.busCode || 'BUS';
       const marker = L.marker([b.latitude, b.longitude], {
         title: b.busCode,
         icon: L.divIcon({
@@ -450,7 +451,7 @@ export class CarteComponent implements AfterViewInit, OnDestroy {
         if (c) coords.push(c);
       });
       const ligne = lignesByTracking.get(ligneTrackingId);
-      const label = ligne?.numero ? `L${ligne.numero}` : ligne?.nom ?? 'Ligne';
+      const label = ligne?.numero ? `L${ligne.numero}` : 'Ligne';
       return { label, coords };
     }).filter(p => p.coords.length >= 2);
 

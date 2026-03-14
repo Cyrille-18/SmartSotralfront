@@ -131,7 +131,7 @@ export class AretsComponent implements OnInit {
   ];
 
   arretForm: FormGroup = this.fb.group({
-    id: [null],
+    trackingId: [null],
     nom: ['', Validators.required],
     latitude: [6.1375, Validators.required],
     longitude: [1.2123, Validators.required],
@@ -157,7 +157,7 @@ export class AretsComponent implements OnInit {
     this.arretSelectionne = arret;
     this.formTitle = arret ? `Modifier ${arret.nom}` : 'Nouvel arrêt';
     this.arretForm.reset({
-      id: arret?.id ?? null,
+      trackingId: arret?.trackingId ?? null,
       nom: arret?.nom ?? '',
       latitude: arret?.latitude ?? 6.1375,
       longitude: arret?.longitude ?? 1.2123,
@@ -173,8 +173,8 @@ export class AretsComponent implements OnInit {
   enregistrer(): void {
     if (this.arretForm.invalid) return;
     const payload = this.arretForm.value as Arret;
-    const action$ = payload.id
-      ? this.arretService.update(payload.id, payload)
+    const action$ = payload.trackingId
+      ? this.arretService.update(payload.trackingId, payload)
       : this.arretService.create(payload);
 
     action$.subscribe({
@@ -190,8 +190,8 @@ export class AretsComponent implements OnInit {
   }
 
   supprimerConfirme(): void {
-    if (!this.arretSelectionne?.id) { this.dialogSuppression = false; return; }
-    this.arretService.delete(this.arretSelectionne.id).subscribe({
+    if (!this.arretSelectionne?.trackingId) { this.dialogSuppression = false; return; }
+    this.arretService.delete(this.arretSelectionne.trackingId).subscribe({
       next: () => { this.dialogSuppression = false; this.refresh(); },
       error: () => { this.dialogSuppression = false; this.refresh(); },
     });

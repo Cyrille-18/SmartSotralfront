@@ -110,6 +110,7 @@ export class AffectationsComponent implements OnInit {
 
   affForm: FormGroup = this.fb.group({
     id: [null],
+    trackingId: [null],
     busId: [null, Validators.required],
     ligneId: [null, Validators.required],
     dateDebut: ['', Validators.required],
@@ -126,7 +127,7 @@ export class AffectationsComponent implements OnInit {
       next: data => (this.affectations = data),
       error: () => {
         this.affectations = [
-          { id: 1, busId: 1, ligneId: 1, dateDebut: new Date().toISOString(), statut: 'ACTIVE' } as Affectation,
+          { id: 1, trackingId: 'demo', busId: 1, ligneId: 1, dateDebut: new Date().toISOString(), statut: 'ACTIVE' } as Affectation,
         ];
       },
     });
@@ -137,6 +138,7 @@ export class AffectationsComponent implements OnInit {
     this.formTitle = aff ? 'Modifier affectation' : 'Nouvelle affectation';
     this.affForm.reset({
       id: aff?.id ?? null,
+      trackingId: aff?.trackingId ?? null,
       busId: aff?.busId ?? null,
       ligneId: aff?.ligneId ?? null,
       dateDebut: aff?.dateDebut ? this.toLocalDateTime(aff.dateDebut) : '',
@@ -154,8 +156,8 @@ export class AffectationsComponent implements OnInit {
   enregistrer(): void {
     if (this.affForm.invalid) return;
     const payload = this.affForm.value as Affectation;
-    const action$ = payload.id
-      ? this.affectationService.update(payload.id, payload)
+    const action$ = payload.trackingId
+      ? this.affectationService.update(payload.trackingId, payload)
       : this.affectationService.create(payload);
 
     action$.subscribe({
@@ -171,16 +173,17 @@ export class AffectationsComponent implements OnInit {
   }
 
   supprimerConfirme(): void {
-    if (!this.affectationSelectionnee?.id) { this.dialogSuppression = false; return; }
-    this.affectationService.delete(this.affectationSelectionnee.id).subscribe({
+    const trackingId = this.affectationSelectionnee?.trackingId;
+    if (!trackingId) { this.dialogSuppression = false; return; }
+    this.affectationService.delete(trackingId).subscribe({
       next: () => { this.dialogSuppression = false; this.refresh(); },
       error: () => { this.dialogSuppression = false; this.refresh(); },
     });
   }
 
   terminer(aff: Affectation): void {
-    if (!aff.id) return;
-    this.affectationService.terminer(aff.id).subscribe({
+    if (!aff.trackingId) return;
+    this.affectationService.terminer(aff.trackingId).subscribe({
       next: () => this.refresh(),
       error: () => this.refresh(),
     });

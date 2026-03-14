@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
-import { Compte } from '../../../shared/models/compte.model';
 
 @Component({
   selector: 'app-login',
@@ -348,18 +347,7 @@ export class LoginComponent {
     };
 
     this.authService.login(credentials).subscribe({
-      next: (response) => {
-        const admin = response.admin as any;
-        const adminData: Compte = {
-          id: admin?.id,
-          nom: admin?.nom || '',
-          prenom: admin?.prenom || '',
-          email: admin?.email || '',
-          telephone: admin?.telephone || '',
-          role: 'ADMIN',
-          statut: 'ACTIF',
-        };
-        this.authService.setAdmin(adminData);
+      next: () => {
         this.router.navigate(['/dashboard']);
         this.loading.set(false);
       },

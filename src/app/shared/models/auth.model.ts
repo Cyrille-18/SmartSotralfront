@@ -15,11 +15,6 @@ export interface AuthLoginResponse {
   rolesList: string[];
   country: string;
   active: boolean;
-  admin: {
-    id: number;
-    nom: string;
-    email: string;
-  };
 }
 
 export type CompteRole = 'ADMIN' | 'CONDUCTEUR' | 'USAGER';

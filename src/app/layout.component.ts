@@ -61,22 +61,22 @@ import { AuthService } from './core/services/auth.service';
 export class LayoutComponent {
   private authService = inject(AuthService);
 
-  admin = signal(this.authService.getAdmin());
+  admin = signal(this.authService.getUser());
   pageTitle = signal('Tableau de bord');
 
   adminName = computed(() => {
     const admin = this.admin();
     if (admin) {
-      const firstName = (admin as any).prenom || '';
-      const lastName = (admin as any).nom || '';
-      return `${firstName} ${lastName}`.trim() || 'Admin';
+      const firstName = admin.firstName || admin.nom || '';
+      const lastName = admin.lastName || '';
+      return `${firstName} ${lastName}`.trim() || admin.email || 'Admin';
     }
     return 'Admin';
   });
 
   constructor() {
     // Mettre à jour le signal quand admin change
-    this.authService.admin$.subscribe(admin => {
+    this.authService.user$.subscribe(admin => {
       this.admin.set(admin);
     });
   }

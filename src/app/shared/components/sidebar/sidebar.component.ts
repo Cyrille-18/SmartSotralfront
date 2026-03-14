@@ -219,14 +219,14 @@ export class SidebarComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
 
-  admin = signal(this.authService.getAdmin());
+  admin = signal(this.authService.getUser());
 
   adminName = computed(() => {
     const admin = this.admin();
     if (admin) {
-      const firstName = (admin as any).prenom || '';
-      const lastName = (admin as any).nom || '';
-      return `${firstName} ${lastName}`.trim() || 'Admin';
+      const firstName = admin.firstName || admin.nom || '';
+      const lastName = admin.lastName || '';
+      return `${firstName} ${lastName}`.trim() || admin.email || 'Admin';
     }
     return 'Admin';
   });
@@ -243,7 +243,7 @@ export class SidebarComponent {
 
   constructor() {
     // Mettre à jour le signal quand admin change
-    this.authService.admin$.subscribe(admin => {
+    this.authService.user$.subscribe(admin => {
       this.admin.set(admin);
     });
   }

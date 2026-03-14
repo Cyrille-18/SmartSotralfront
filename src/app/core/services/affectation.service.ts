@@ -18,7 +18,7 @@ export class AffectationService extends BaseService<Affectation> {
     return this.http.get<Affectation[]>(`${this.apiUrl}/affectations/actives`);
   }
 
-  terminer(id: number): Observable<Affectation> {
-    return this.http.patch<Affectation>(`${this.apiUrl}/affectations/${id}/terminer`, {});
+  terminer(trackingId: string): Observable<Affectation> {
+    return this.http.patch<Affectation>(`${this.apiUrl}/affectations/${trackingId}/terminer`, {});
   }
 }
